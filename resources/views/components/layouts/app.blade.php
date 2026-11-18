@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="id" class="bg-background scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
+
+    <title>{{ $title ?? 'InCase — Pastikan Semua Barangmu Siap Sebelum Berangkat' }}</title>
+    <meta name="description" content="InCase membantu kamu memastikan semua barang bawaan lengkap sebelum berangkat dan tidak tertinggal saat pulang, untuk sekolah, traveling, hiking, dan lainnya.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="min-h-screen bg-background font-sans text-foreground antialiased">
+    {{ $slot }}
+</body>
+</html>
