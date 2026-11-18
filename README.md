@@ -1,74 +1,66 @@
-# InCase — Laravel 12 + Blade + Tailwind
+# InCase
 
-Ini bukan project Laravel penuh (composer install butuh akses ke packagist.org yang
-gak bisa saya jangkau dari sandbox ini). Yang saya kasih: semua file Blade + config
-frontend, tinggal drop ke project Laravel 12 kosong.
+Aplikasi web untuk memastikan **tidak ada barang yang tertinggal**. Barang ditempeli stiker RFID, lalu dipindai ke box sebelum berangkat dan sebelum pulang. Cocok untuk sekolah, traveling, hiking, atau kegiatan apa pun.
 
-## Cara pasang
+Satu jenis pengguna saja: tanpa peran admin atau guru.
 
-1. Bikin project Laravel 12 baru (kalau belum ada):
-   ```bash
-   composer create-project laravel/laravel incase
-   cd incase
-   ```
+## Cara kerja
 
-2. Copy semua isi folder ini ke root project, timpa yang sudah ada:
-   - `resources/views/` → replace/merge
-   - `resources/css/app.css` → replace
-   - `resources/js/app.js` dan `resources/js/bootstrap.js` → replace
-   - `routes/web.php` → replace
-   - `tailwind.config.js` → taruh di root
-   - `vite.config.js` → replace punya bawaan Laravel
-   - `package.json` → merge `dependencies`/`devDependencies`-nya ke package.json yang ada
+1. **Daftarkan barang** (menu Barang) dan pasang stiker RFID. Tandai barang berharga.
+2. **Buat kegiatan** (menu Kegiatan), misalnya "Hiking Gunung", lalu pilih barang yang harus dibawa. Jadikan kegiatan itu aktif.
+3. **Scan berangkat:** pilih mode di menu Pindai, lalu tempelkan barang ke box. Aplikasi menampilkan yang sudah dan yang masih kurang.
+4. **Scan pulang:** pindai lagi saat pulang. Barang yang belum kembali dijelaskan: dipinjam/dititipkan atau hilang. Barang berharga yang hilang wajib diberi keterangan kapan dan di mana terakhir terlihat.
+5. Riwayat scan bisa dilihat dan diekspor ke CSV. Pengingat harian dikirim jam 06.00 dan 19.00 untuk kegiatan hari ini atau besok.
 
-3. Install dependency:
-   ```bash
-   npm install
-   composer require laravel/breeze --dev # skip kalau gak butuh auth
-   ```
-
-4. Jalankan:
-   ```bash
-   npm run dev
-   php artisan serve
-   ```
-
-## Struktur
+## Arsitektur
 
 ```
-resources/views/
-  layouts/
-    app.blade.php         → shell HTML (head, font, @vite)
-  components/
-    navbar.blade.php       (pakai Alpine.js buat toggle menu mobile)
-    hero.blade.php
-    stats.blade.php
-    features.blade.php
-    how-it-works.blade.php
-    dashboard-preview.blade.php
-    technology.blade.php
-    faq.blade.php          (Alpine.js buat accordion)
-    footer.blade.php
-    ui/button.blade.php    (reusable button, variant & size props)
-    icon/*.blade.php       (29 icon Lucide dalam bentuk SVG asli, dipakai via <x-icon.nama />)
-  pages/
-    home.blade.php          → assembly semua komponen di atas
-routes/web.php               → GET / render pages.home
+Stiker RFID -> ESP32 + pembaca RFID -> broker MQTT -> php artisan mqtt:listen -> database -> web
 ```
 
-## Catatan teknis
+- Backend: Laravel, Blade, Tailwind CSS, Alpine.js
+- Database: MySQL (SQLite untuk tes)
+- Perangkat: ESP32 mengirim UID stiker lewat MQTT (listener `mqtt:listen`) atau HTTP `POST /api/scan` dengan header `X-API-KEY`
+- Tampilan mobile-first: tab navigasi bawah di HP, sidebar di layar lebar
 
-- **Alpine.js** dipakai buat interaktivitas (toggle menu navbar, accordion FAQ) —
-  bukan Vue/React/Livewire, cuma library JS ringan (~15kb) yang lazim dipasangkan
-  sama Blade + Tailwind. Kalau mau dihapus dan diganti vanilla JS murni, tinggal
-  ganti `x-data`/`x-show`/`@click` di `navbar.blade.php` dan `faq.blade.php` sama
-  `addEventListener` biasa.
-- **Icon**: saya ambil SVG asli dari package `lucide-static` (sama persis dengan
-  `lucide-react` yang dipakai di versi React), jadi bentuknya identik, bukan
-  reka-reka.
-- **Warna, spacing, radius, font, animasi scan** — semua CSS variable & keyframe
-  di `app.css` saya salin apa adanya dari `globals.css` React, jadi tampilan
-  harusnya pixel-identical.
-- Data statis (stats, features, steps, faq, dst) saya taruh sebagai array `@php`
-  di masing-masing komponen — kalau nanti mau dari database, tinggal ganti jadi
-  Eloquent query / Controller yang pass ke view.
+## Menjalankan di komputer sendiri
+
+Butuh PHP 8.3+, Composer, Node.js, dan MySQL.
+
+```bash
+composer install
+npm install
+npm run build
+cp .env.example .env
+php artisan key:generate
+php artisan storage:link
+```
+
+Isi `DB_*` dan `MQTT_*` di `.env`, lalu:
+
+```bash
+php artisan migrate
+php artisan serve
+```
+
+Proses yang berjalan terus (terminal terpisah):
+
+```bash
+php artisan mqtt:listen      # menerima scan dari perangkat
+php artisan schedule:work    # pengingat harian
+```
+
+Variabel MQTT di `.env`: `MQTT_HOST`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASS`, `MQTT_TOPIC`.
+
+## Tes
+
+```bash
+php artisan test
+```
+
+Tes memakai SQLite di memori, jadi ekstensi PHP `pdo_sqlite` harus aktif.
+
+## Catatan
+
+- Satu pengguna hanya punya satu kegiatan aktif pada satu waktu.
+- Hosting online butuh server yang bisa menjalankan PHP dan proses latar (VPS). Vercel dan Netlify tidak cocok.
